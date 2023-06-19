@@ -85,8 +85,23 @@ postcode_recognizer = PatternRecognizer(supported_entity="POSTCODE",
                                                           regex=r"\d{5}",
                                                           score=0.5)])
 
+street_recognizer = PatternRecognizer(supported_entity="STREET",
+                                      supported_language="de",
+                                      patterns=[Pattern(name="street",
+                                                             regex=r"<LOCATION>.?\s*(\d{1,4})",
+                                                             score=0.5)])
+date_recognizer = PatternRecognizer(supported_entity="DATE",
+                                    supported_language="de",
+                                    patterns=[Pattern(name="date",
+                                                      regex=r"\d{2}/\d{4}",
+                                                      score=0.5), Pattern(name="date_dot",
+                                                                          regex=r"\d{2}.\d{4}",
+                                                                          score=0.5)])
+
 analyzer.registry.add_recognizer(postcode_recognizer)
 analyzer.registry.add_recognizer(code_recognizer)
+analyzer.registry.add_recognizer(street_recognizer)
+analyzer.registry.add_recognizer(date_recognizer)
 
 operators = {"PERSON": OperatorConfig("replace"),
              "DATE_TIME": OperatorConfig("replace"),
@@ -97,7 +112,9 @@ operators = {"PERSON": OperatorConfig("replace"),
              "CODE": OperatorConfig("replace"),
              "POSTCODE": OperatorConfig("replace"),
              "URL": OperatorConfig("replace"),
-             "ORGANIZATION": OperatorConfig("replace")
+             "ORGANIZATION": OperatorConfig("replace"),
+             "STREET": OperatorConfig("replace"),
+             "DATE": OperatorConfig("replace")
              }
 
 anonymizer = AnonymizerEngine()
@@ -114,7 +131,7 @@ for filename in filenames:
     # NRP: Nationality, religious or political
     res_all = analyzer.analyze(
         text=text_to_anonymize, language='de', entities=[
-            'DATE_TIME', 'NRP', 'PHONE_NUMBER', 'EMAIL_ADDRESS', 'URL', 'IBAN_CODE', 'CODE', 'POSTCODE'
+            'DATE_TIME', 'NRP', 'PHONE_NUMBER', 'EMAIL_ADDRESS', 'URL', 'IBAN_CODE', 'CODE', 'POSTCODE', 'DATE'
         ], score_threshold=0.3)
 
     res = res_all + res_fl  # + res_person + res_loc
@@ -122,6 +139,14 @@ for filename in filenames:
                                               analyzer_results=res,
                                               operators=operators)
 
+    res_all = analyzer.analyze(
+        text=anonymized_results.text, language='de', entities=[
+            'STREET'
+        ], score_threshold=0.3)
+
+    anonymized_results = anonymizer.anonymize(text=anonymized_results.text,
+                                              analyzer_results=res_all,
+                                              operators=operators)
     with open(filename.removesuffix(".pdf") + ".txt", 'w') as f:
         f.write(anonymized_results.text)
 
