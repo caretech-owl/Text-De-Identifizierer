@@ -1,8 +1,9 @@
 # For Presidio
-from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
+from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern, RecognizerRegistry
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 from presidio_analyzer.nlp_engine import NlpEngineProvider
+from flair_recognizer import FlairRecognizer
 
 # For extracting text
 from pdfminer.high_level import extract_text, extract_pages
@@ -50,7 +51,17 @@ provider = NlpEngineProvider(nlp_configuration={
 analyzer = AnalyzerEngine(
     nlp_engine=provider.create_engine(), supported_languages=["de", "en"])
 
+# Flair https://github.com/flairNLP/flair is better in recognizing german names and locations
+flair_recognizer = (
+    FlairRecognizer(supported_language="de")
+)  # This downloads a large (+2GB) model on the first run
+registry = RecognizerRegistry()
+registry.add_recognizer(flair_recognizer)
+fl_analyzer = AnalyzerEngine(
+    registry=registry, nlp_engine=provider.create_engine(), supported_languages="de")
 
+
+# Breaks for german https://github.com/explosion/spacy-stanza/issues/70
 # provider2 = NlpEngineProvider(nlp_configuration={
 #     "nlp_engine_name": "stanza",
 #     "models": [{"lang_code": "de",
@@ -85,7 +96,8 @@ operators = {"PERSON": OperatorConfig("replace"),
              "EMAIL_ADDRESS": OperatorConfig("replace"),
              "CODE": OperatorConfig("replace"),
              "POSTCODE": OperatorConfig("replace"),
-             "URL": OperatorConfig("replace")
+             "URL": OperatorConfig("replace"),
+             "ORGANIZATION": OperatorConfig("replace")
              }
 
 anonymizer = AnonymizerEngine()
@@ -93,23 +105,19 @@ anonymizer = AnonymizerEngine()
 for filename in filenames:
     text_to_anonymize = extract_text(filename)
 
-    # NRP: Nationality, religious or political
-
     # Analyze the text using the analyzer engine
+    res_fl = fl_analyzer.analyze(
+        text=text_to_anonymize, language='de', entities=[
+            'PERSON', 'LOCATION', 'ORGANIZATION'
+        ], score_threshold=0.3)
+
+    # NRP: Nationality, religious or political
     res_all = analyzer.analyze(
         text=text_to_anonymize, language='de', entities=[
             'DATE_TIME', 'NRP', 'PHONE_NUMBER', 'EMAIL_ADDRESS', 'URL', 'IBAN_CODE', 'CODE', 'POSTCODE'
         ], score_threshold=0.3)
-    # NER Score is always 0.85
-    res_person = analyzer.analyze(
-        text=text_to_anonymize, language='de', entities=['PERSON'
-                                                         ], score_threshold=0.6)
 
-    res_loc = analyzer.analyze(
-        text=text_to_anonymize, language='de', entities=['LOCATION'
-                                                         ], score_threshold=0.6)
-
-    res = res_all + res_person + res_loc
+    res = res_all + res_fl  # + res_person + res_loc
     anonymized_results = anonymizer.anonymize(text=text_to_anonymize,
                                               analyzer_results=res,
                                               operators=operators)
