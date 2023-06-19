@@ -18,7 +18,7 @@ import os
 # import stanza
 # stanza.download("de")
 
-
+# Get commandline arguments
 parser = argparse.ArgumentParser(
     prog='PDF-Anonymisierer',
     description='Anonymisiert deutschsprachige PDFs',
@@ -37,7 +37,7 @@ else:
                  and f.endswith('.pdf')
                  ]
 
-# Analyzer
+# German Spacy model
 provider = NlpEngineProvider(nlp_configuration={
     "nlp_engine_name": "spacy",
     "models": [{"lang_code": "de",
@@ -71,28 +71,31 @@ fl_analyzer = AnalyzerEngine(
 # analyzer2 = AnalyzerEngine(
 #     nlp_engine=provider2.create_engine(), supported_languages=["de"])
 
+# Everything above 5 digits
 code_recognizer = PatternRecognizer(supported_entity="CODE",
                                     supported_language="de",
                                     patterns=[Pattern(name="code",
-                                                      # for numbers between 5 digits long
+                                                      # for numbers being more than 5 digits long
                                                       regex=r"\d{5}\d+",
                                                       score=0.5)])
 
 postcode_recognizer = PatternRecognizer(supported_entity="POSTCODE",
                                         supported_language="de",
                                         patterns=[Pattern(name="postcode",
-                                                          # for numbers between 5 digits long
+                                                          # for numbers being  5 digits long
                                                           regex=r"\d{5}",
                                                           score=0.5)])
 
 street_recognizer = PatternRecognizer(supported_entity="STREET",
                                       supported_language="de",
                                       patterns=[Pattern(name="street",
+                                                             # Merge Location and housnumber, Used after first anonymization run
                                                              regex=r"<LOCATION>.?\s*(\d{1,4})",
                                                              score=0.5)])
 date_recognizer = PatternRecognizer(supported_entity="DATE",
                                     supported_language="de",
                                     patterns=[Pattern(name="date",
+                                                      # Sorts out abbreviated dates
                                                       regex=r"\d{2}/\d{4}",
                                                       score=0.5), Pattern(name="date_dot",
                                                                           regex=r"\d{2}.\d{4}",
@@ -103,6 +106,7 @@ analyzer.registry.add_recognizer(code_recognizer)
 analyzer.registry.add_recognizer(street_recognizer)
 analyzer.registry.add_recognizer(date_recognizer)
 
+# Replace everything by <NAME>
 operators = {"PERSON": OperatorConfig("replace"),
              "DATE_TIME": OperatorConfig("replace"),
              "NRP": OperatorConfig("replace"),
@@ -134,11 +138,12 @@ for filename in filenames:
             'DATE_TIME', 'NRP', 'PHONE_NUMBER', 'EMAIL_ADDRESS', 'URL', 'IBAN_CODE', 'CODE', 'POSTCODE', 'DATE'
         ], score_threshold=0.3)
 
-    res = res_all + res_fl  # + res_person + res_loc
+    res = res_all + res_fl
     anonymized_results = anonymizer.anonymize(text=text_to_anonymize,
                                               analyzer_results=res,
                                               operators=operators)
 
+    # Rerun for addresses
     res_all = analyzer.analyze(
         text=anonymized_results.text, language='de', entities=[
             'STREET'
