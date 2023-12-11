@@ -8,6 +8,7 @@ from flair_recognizer import FlairRecognizer
 # For extracting text
 from pdfminer.high_level import extract_text, extract_pages
 from pdfminer.layout import LTTextContainer, LTChar, LTTextLine
+import docx
 
 # For command line arguments
 import argparse
@@ -34,7 +35,7 @@ else:
     # Get files in path
     filenames = [os.path.join(args.filename, f) for f in os.listdir(args.filename) if
                  os.path.isfile(os.path.join(args.filename, f))
-                 and f.endswith('.pdf')
+                 and (f.endswith('.pdf') or f.endswith('.docx') or f.endswith('.log'))
                  ]
 
 # German Spacy model
@@ -123,8 +124,36 @@ operators = {"PERSON": OperatorConfig("replace"),
 
 anonymizer = AnonymizerEngine()
 
+
+def getTextDocx(filename):
+    """Opens a "Word" document in docx/doc file format. Uses docx library
+
+    Args:
+        filename (str): name of the file
+
+    Returns:
+        list: a list of lines (textstrings) and the doc object of docx
+    """
+    doc = docx.Document(filename)
+    fullText = []
+    for para in doc.paragraphs:
+        fullText.append(para.text)
+    return fullText, doc
+
+
+if not os.path.exists("output"):
+    os.mkdir("output")
 for filename in filenames:
-    text_to_anonymize = extract_text(filename)
+    if filename.endswith("pdf"):
+        text_to_anonymize = extract_text(filename)
+    elif filename.endswith("docx"):
+        fullText, _ = getTextDocx(filename)
+    elif filename.endswith("log"):
+        with open(filename, 'r') as f:
+            text_to_anonymize = f.read()
+    else:
+        print("Cannot open file: ", filename)
+        continue
 
     # Analyze the text using the analyzer engine
     res_fl = fl_analyzer.analyze(
@@ -152,7 +181,8 @@ for filename in filenames:
     anonymized_results = anonymizer.anonymize(text=anonymized_results.text,
                                               analyzer_results=res_all,
                                               operators=operators)
-    with open(filename.removesuffix(".pdf") + ".txt", 'w') as f:
+
+    with open("output/" + os.path.basename(filename).removesuffix(".pdf").removesuffix(".docx") + ".txt", 'w') as f:
         f.write(anonymized_results.text)
 
 exit(0)
