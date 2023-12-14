@@ -137,20 +137,24 @@ operators = {"PERSON": OperatorConfig("replace"),
 anonymizer = AnonymizerEngine()
 
 
-def getTextDocx(filename):
+def getTextDocx(filename: str) -> str:
     """Opens a "Word" document in docx/doc file format. Uses docx library
 
     Args:
         filename (str): name of the file
 
     Returns:
-        list: a list of lines (textstrings) and the doc object of docx
+        str: text of the document
     """
     doc = docx.Document(filename)
     fullText = []
     for para in doc.paragraphs:
         fullText.append(para.text)
-    return fullText, doc
+    res = ""
+    for line in fullText:
+        res = res + line + "\n"
+
+    return res
 
 
 if not os.path.exists("output"):
@@ -159,8 +163,7 @@ for filename in filenames:
     if filename.endswith("pdf"):
         text_to_anonymize = extract_text(filename)
     elif filename.endswith("docx"):
-        fullText, _ = getTextDocx(filename)
-    elif filename.endswith("log"):
+        text_to_anonymize = getTextDocx(filename)
     elif filename.endswith("log") or filename.endswith("txt"):
         with open(filename, 'r') as f:
             text_to_anonymize = f.read()
