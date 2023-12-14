@@ -28,6 +28,12 @@ source venv/bin/activate
 python anonymize.py path/
 
 ```
-Results are saved as txt in a directory called output. 
+Results are saved as txt in a directory called `output`. 
+
+For (simple) testing purposes we added small examples in the `example` folder. Give it a try
+```sh
+source venv/bin/activate
+python anonymize.py examples/
+```
 
 
