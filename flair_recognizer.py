@@ -12,23 +12,21 @@ from flair.data import Sentence
 from flair.models import SequenceTagger
 
 
-# This Code is taken from the presidio documentation
+# This Code is mostly taken from the presidio documentation
 
 class FlairRecognizer(EntityRecognizer):
     ENTITIES = [
         "LOCATION",
         "PERSON",
         "ORGANIZATION",
-        # "MISCELLANEOUS"   # - There are no direct correlation with Presidio entities.
     ]
 
-    DEFAULT_EXPLANATION = "Identified as {} by Flair's Named Entity Recognition"
+    DEFAULT_EXPLANATION = "Identified as {} by Flair's NER"
 
     CHECK_LABEL_GROUPS = [
         ({"LOCATION"}, {"LOC", "LOCATION"}),
         ({"PERSON"}, {"PER", "PERSON"}),
         ({"ORGANIZATION"}, {"ORG"}),
-        # ({"MISCELLANEOUS"}, {"MISC"}), # Probably not PII
     ]
 
     MODEL_LANGUAGES = {
@@ -42,7 +40,6 @@ class FlairRecognizer(EntityRecognizer):
         "PER": "PERSON",
         "LOC": "LOCATION",
         "ORG": "ORGANIZATION",
-        # 'MISC': 'MISCELLANEOUS'   # - Probably not PII
     }
 
     def __init__(
@@ -53,15 +50,13 @@ class FlairRecognizer(EntityRecognizer):
         model: SequenceTagger = None,
     ):
         self.check_label_groups = (
-            check_label_groups if check_label_groups else self.CHECK_LABEL_GROUPS
-        )
+            check_label_groups
+            if check_label_groups else self.CHECK_LABEL_GROUPS)
 
-        supported_entities = supported_entities if supported_entities else self.ENTITIES
-        self.model = (
-            model
-            if model
-            else SequenceTagger.load(self.MODEL_LANGUAGES.get(supported_language))
-        )
+        supported_entities = supported_entities \
+            if supported_entities else self.ENTITIES
+        self.model = (model if model else SequenceTagger.load(
+            self.MODEL_LANGUAGES.get(supported_language)))
 
         super().__init__(
             supported_entities=supported_entities,
@@ -83,8 +78,8 @@ class FlairRecognizer(EntityRecognizer):
 
     # Class to use Flair with Presidio as an external recognizer.
     def analyze(
-        self, text: str, entities: List[str], nlp_artifacts: NlpArtifacts = None
-    ) -> List[RecognizerResult]:
+            self, text: str, entities: List[str],
+            nlp_artifacts: NlpArtifacts = None) -> List[RecognizerResult]:
         """
         Analyze text using Text Analytics.
 
@@ -92,8 +87,8 @@ class FlairRecognizer(EntityRecognizer):
         :param entities: Not working properly for this recognizer.
         :param nlp_artifacts: Not used by this recognizer.
         :param language: Text language. Supported languages in MODEL_LANGUAGES
-        :return: The list of Presidio RecognizerResult constructed from the recognized
-            Flair detections.
+        :return: The list of Presidio RecognizerResult constructed from
+          the recognized Flair detections.
         """
 
         results = []
@@ -101,7 +96,8 @@ class FlairRecognizer(EntityRecognizer):
         sentences = Sentence(text)
         self.model.predict(sentences)
 
-        # If there are no specific list of entities, we will look for all of it.
+        # If there are no specific list of entities,
+        # we will look for all of it.
         if not entities:
             entities = self.supported_entities
 
@@ -127,7 +123,8 @@ class FlairRecognizer(EntityRecognizer):
 
         return results
 
-    def _convert_to_recognizer_result(self, entity, explanation) -> RecognizerResult:
+    def _convert_to_recognizer_result(
+            self, entity, explanation) -> RecognizerResult:
 
         entity_type = self.PRESIDIO_EQUIVALENCES.get(entity.tag, entity.tag)
         flair_score = round(entity.score, 2)
@@ -164,5 +161,5 @@ class FlairRecognizer(EntityRecognizer):
         entity: str, label: str, check_label_groups: Tuple[Set, Set]
     ) -> bool:
         return any(
-            [entity in egrp and label in lgrp for egrp, lgrp in check_label_groups]
-        )
+            [entity in egrp and label in lgrp for egrp,
+             lgrp in check_label_groups])

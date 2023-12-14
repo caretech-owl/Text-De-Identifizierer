@@ -1,5 +1,6 @@
 # For Presidio
-from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern, RecognizerRegistry
+from presidio_analyzer import (
+    AnalyzerEngine, PatternRecognizer, Pattern, RecognizerRegistry)
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 from presidio_analyzer.nlp_engine import NlpEngineProvider
@@ -14,10 +15,6 @@ import docx
 import argparse
 
 import os
-
-# For stanza
-# import stanza
-# stanza.download("de")
 
 # Get commandline arguments
 parser = argparse.ArgumentParser(
@@ -55,26 +52,26 @@ provider = NlpEngineProvider(nlp_configuration={
     "nlp_engine_name": "spacy",
     "models": [{"lang_code": "de",
                 "model_name": "de_core_news_lg"
-                }  # , {
-               #   "lang_code": "en",
-               #   "model_name": "en_core_web_lg"
-               # }
-               ]
+                }]
 })
 analyzer = AnalyzerEngine(
     nlp_engine=provider.create_engine(), supported_languages=["de", "en"])
 
-# Flair https://github.com/flairNLP/flair is better in recognizing german names and locations
+# Flair https://github.com/flairNLP/flair
+# is better in recognizing german names and locations
 flair_recognizer = (
     FlairRecognizer(supported_language="de")
 )  # This downloads a large (+2GB) model on the first run
 registry = RecognizerRegistry()
 registry.add_recognizer(flair_recognizer)
 fl_analyzer = AnalyzerEngine(
-    registry=registry, nlp_engine=provider.create_engine(), supported_languages="de")
+    registry=registry, nlp_engine=provider.create_engine(),
+    supported_languages="de")
 
 
 # Breaks for german https://github.com/explosion/spacy-stanza/issues/70
+# import stanza
+# stanza.download("de")
 # provider2 = NlpEngineProvider(nlp_configuration={
 #     "nlp_engine_name": "stanza",
 #     "models": [{"lang_code": "de",
@@ -84,35 +81,36 @@ fl_analyzer = AnalyzerEngine(
 # analyzer2 = AnalyzerEngine(
 #     nlp_engine=provider2.create_engine(), supported_languages=["de"])
 
+###
+# Custom recognizers
+###
+
 # Everything above 5 digits
 code_recognizer = PatternRecognizer(supported_entity="CODE",
                                     supported_language="de",
                                     patterns=[Pattern(name="code",
-                                                      # for numbers being more than 5 digits long
                                                       regex=r"\d{5}\d+",
                                                       score=0.5)])
 
 postcode_recognizer = PatternRecognizer(supported_entity="POSTCODE",
                                         supported_language="de",
                                         patterns=[Pattern(name="postcode",
-                                                          # for numbers being  5 digits long
                                                           regex=r"\d{5}",
                                                           score=0.5)])
+# Merge Location and housnumber, Used after first anonymization run
+street_recognizer = PatternRecognizer(
+    supported_entity="STREET", supported_language="de",
+    patterns=[
+        Pattern(
+            name="street", regex=r"<LOCATION>.?\s*(\d{1,4})",
+            score=0.5)])
 
-street_recognizer = PatternRecognizer(supported_entity="STREET",
-                                      supported_language="de",
-                                      patterns=[Pattern(name="street",
-                                                             # Merge Location and housnumber, Used after first anonymization run
-                                                             regex=r"<LOCATION>.?\s*(\d{1,4})",
-                                                             score=0.5)])
-date_recognizer = PatternRecognizer(supported_entity="DATE",
-                                    supported_language="de",
-                                    patterns=[Pattern(name="date",
-                                                      # Sorts out abbreviated dates
-                                                      regex=r"\d{2}/\d{4}",
-                                                      score=0.5), Pattern(name="date_dot",
-                                                                          regex=r"\d{2}.\d{4}",
-                                                                          score=0.5)])
+# Sorts out abbreviated dates
+date_recognizer = PatternRecognizer(
+    supported_entity="DATE", supported_language="de",
+    patterns=[Pattern(name="date", regex=r"\d{2}/\d{4}", score=0.5),
+              Pattern(
+                  name="date_dot", regex=r"\d{2}.\d{4}", score=0.5)])
 
 analyzer.registry.add_recognizer(postcode_recognizer)
 analyzer.registry.add_recognizer(code_recognizer)
