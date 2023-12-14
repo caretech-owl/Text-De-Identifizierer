@@ -176,25 +176,28 @@ for filename in filenames:
         text=text_to_anonymize, language='de', entities=[
             'PERSON', 'LOCATION', 'ORGANIZATION'
         ], score_threshold=0.3)
-
-    # NRP: Nationality, religious or political
-    res_all = analyzer.analyze(
-        text=text_to_anonymize, language='de', entities=[
-            'DATE_TIME', 'NRP', 'PHONE_NUMBER', 'EMAIL_ADDRESS', 'URL', 'IBAN_CODE', 'CODE', 'POSTCODE', 'DATE'
-        ], score_threshold=0.3)
-
-    res = res_all + res_fl
-    anonymized_results = anonymizer.anonymize(text=text_to_anonymize,
-                                              analyzer_results=res,
-                                              operators=operators)
-
+    text_to_anonymize = anonymizer.anonymize(text=text_to_anonymize,
+                                             analyzer_results=res_fl,
+                                             operators=operators).text
     # Rerun for addresses
     res_all = analyzer.analyze(
-        text=anonymized_results.text, language='de', entities=[
+        text=text_to_anonymize, language='de', entities=[
             'STREET'
         ], score_threshold=0.3)
 
-    anonymized_results = anonymizer.anonymize(text=anonymized_results.text,
+    text_to_anonymize = anonymizer.anonymize(text=text_to_anonymize,
+                                             analyzer_results=res_all,
+                                             operators=operators).text
+
+    # Rerun for all other entities
+    # NRP: Nationality, religious or political
+    res_all = analyzer.analyze(
+        text=text_to_anonymize, language='de',
+        entities=['DATE_TIME', 'NRP', 'PHONE_NUMBER', 'EMAIL_ADDRESS', 'URL',
+                  'IBAN_CODE', 'CODE', 'POSTCODE', 'DATE'],
+        score_threshold=0.3)
+
+    anonymized_results = anonymizer.anonymize(text=text_to_anonymize,
                                               analyzer_results=res_all,
                                               operators=operators)
 
