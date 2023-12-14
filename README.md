@@ -7,7 +7,7 @@ This project provides a skript for automatic removal of direct personal identifi
 We assume that python and git are installed and there is basic knowledge about both tools. Here, we provide commands to install requirements in a python virtualenv, which have been tested on Linux.
 
 ```sh
-git clone https://github.com/caretech-owl/text-anonymisierer
+git clone https://github.com/caretech-owl/Text-De-Identifizierer
 cd text-anonymisierer
 python -m venv
 source venv/bin/activate
