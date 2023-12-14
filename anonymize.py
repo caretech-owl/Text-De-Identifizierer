@@ -21,22 +21,34 @@ import os
 
 # Get commandline arguments
 parser = argparse.ArgumentParser(
-    prog='PDF-Anonymisierer',
-    description='Anonymisiert deutschsprachige PDFs',
+    prog='Text-Anonymisierer',
+    description='Anonymisiert deutschsprachige Texte',
     epilog='')
-
 parser.add_argument('filename', type=str,
-                    help="Datei (Endung .pdf) oder Ordner mit Dateien")
+                    help="Datei oder Ordner mit Dateien")
 args = parser.parse_args()
 
-if args.filename.endswith('pdf'):
+# Gather filenames
+filenames = []
+if (args.filename.endswith('pdf') or
+    args.filename.endswith('docx') or
+    args.filename.endswith('log') or
+        args.filename.endswith('txt')):
     filenames = [args.filename, ]
-else:
+    if not os.path.isfile(args.filename):
+        print("File not found!")
+        exit(1)
+elif os.path.isdir(args.filename):
     # Get files in path
-    filenames = [os.path.join(args.filename, f) for f in os.listdir(args.filename) if
-                 os.path.isfile(os.path.join(args.filename, f))
-                 and (f.endswith('.pdf') or f.endswith('.docx') or f.endswith('.log'))
-                 ]
+    filenames = [
+        os.path.join(args.filename, f) for f in os.listdir(args.filename)
+        if os.path.isfile(os.path.join(args.filename, f)) and
+        (f.endswith('.pdf') or f.endswith('.docx') or f.endswith('.log')
+         or f.endswith('.txt'))]
+
+if len(filenames) == 0:
+    print("No files found! Supported file types: pdf, docx, log, txt")
+    exit(1)
 
 # German Spacy model
 provider = NlpEngineProvider(nlp_configuration={
@@ -149,6 +161,7 @@ for filename in filenames:
     elif filename.endswith("docx"):
         fullText, _ = getTextDocx(filename)
     elif filename.endswith("log"):
+    elif filename.endswith("log") or filename.endswith("txt"):
         with open(filename, 'r') as f:
             text_to_anonymize = f.read()
     else:
@@ -182,7 +195,11 @@ for filename in filenames:
                                               analyzer_results=res_all,
                                               operators=operators)
 
-    with open("output/" + os.path.basename(filename).removesuffix(".pdf").removesuffix(".docx") + ".txt", 'w') as f:
+    # Save file
+    new_file = "output/" + os.path.basename(filename)
+    for i in [".pdf", ".docx", ".log", ".txt"]:
+        new_file = new_file.removesuffix(i)
+    with open(new_file + ".txt", 'w') as f:
         f.write(anonymized_results.text)
 
 exit(0)
