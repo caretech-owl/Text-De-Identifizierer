@@ -22,7 +22,7 @@ source venv/bin/activate
 python anonymize.py path/to/file
 ```
 
-For- de-iidentifying files in a directory:
+For de-identifying files in a directory:
 ```sh
 source venv/bin/activate
 python anonymize.py path/
